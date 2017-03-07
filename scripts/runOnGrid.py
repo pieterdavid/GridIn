@@ -213,7 +213,18 @@ for name, analysis in analyses.items():
 
     def globMatch(value, pattern):
         import fnmatch
-        return fnmatch.fnmatch(value, pattern)
+
+        # If pattern starts with a '!', negate the result
+        negate = False
+        if pattern[0] == '!':
+            pattern = pattern[1:]
+            negate = True
+
+        result = fnmatch.fnmatch(value, pattern)
+        if negate:
+            return not result
+        else:
+            return result
 
     def globIn(value, patterns):
         """
