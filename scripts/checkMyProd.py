@@ -147,6 +147,15 @@ def main():
             continue
         line = key + ": " + str(len(tasks[key]))
         print line
+
+    def format_blacklist():
+        if os.path.isfile("blacklist.txt"):
+            with open("blacklist.txt") as f:
+                sites = f.readlines()
+                if len(sites) > 0:
+                    return " --siteblacklist={}".format(",".join(sites))
+
+        return ""
     
     #####
     # Suggest some actions depending on the crab status
@@ -161,15 +170,15 @@ def main():
     if len(tasks['SUBMITFAILED']) > 0:
         print "##### SUBMITFAILED tasks #####"
         for task in tasks['SUBMITFAILED']:
-            print "rm -r tasks/" + task + "; crab submit " + task + ".py"
+            print "rm -r tasks/" + task + "; crab submit " + task + ".py" + format_blacklist
     if len(tasks['FAILED']) > 0:
         print "##### FAILED tasks #####"
         for task in tasks['FAILED']:
-            print "crab resubmit tasks/" + task
+            print "crab resubmit tasks/" + task + format_blacklist()
     if len(tasks['TORESUBMIT']) > 0:
         print "##### TORESUBMIT tasks #####"
         for task in tasks['TORESUBMIT']:
-            print "crab resubmit tasks/" + task + " --siteblacklist=T2_UK_SGrid_RALPP,T1_US_FNAL"
+            print "crab resubmit tasks/" + task + format_blacklist()
 
 if __name__ == '__main__':
     main()
