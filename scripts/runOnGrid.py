@@ -153,7 +153,7 @@ def submit(job):
     pyCfgParams = [str('runOnData=%d' % (0 if job['on_mc'] else 1))]
 
     era = job['metadata']['era']
-    assert era == '25ns' or era == '50ns'
+    assert era == '25ns' or era == '50ns' or era == '2016'
     pyCfgParams += [str('era=%s' % era)]
 
     if 'globalTag' in job['metadata']:
