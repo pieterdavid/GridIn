@@ -103,11 +103,14 @@ def load_request(folder):
 
 def getGitTagRepoUrl(gitCallPath):
     # get the stuff needed to write a valid url: name on github, name of repo, for both origin and upstream
-    proc = subprocess.Popen(['git', 'remote', 'show', 'origin'], cwd = gitCallPath, stdout=subprocess.PIPE)
-    remoteOrigin = proc.stdout.read()
-    remoteOrigin = [x.split(':')[-1].split('/') for x in remoteOrigin.split('\n') if 'Fetch URL' in x]
-    remoteOrigin, repoOrigin = remoteOrigin[0]
-    repoOrigin = repoOrigin.strip('.git')
+    proc = subprocess.Popen(['git', 'remote', 'show', 'origin'], cwd = gitCallPath, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    remoteOrigin = ''
+    repoOrigin = ''
+    if 'fatal' not in proc.stderr.read():
+        remoteOrigin = proc.stdout.read()
+        remoteOrigin = [x.split(':')[-1].split('/') for x in remoteOrigin.split('\n') if 'Fetch URL' in x]
+        remoteOrigin, repoOrigin = remoteOrigin[0]
+        repoOrigin = repoOrigin.strip('.git')
     proc = subprocess.Popen(['git', 'remote', 'show', 'upstream'], cwd = gitCallPath, stdout=subprocess.PIPE)
     remoteUpstream = proc.stdout.read()
     remoteUpstream = [x.split(':')[-1].split('/') for x in remoteUpstream.split('\n') if 'Fetch URL' in x]

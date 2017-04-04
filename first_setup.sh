@@ -14,16 +14,14 @@ GITHUBUSERREMOTE=`git remote -v | grep upstream | awk '{print $2}' | head -n 1 |
 git remote add origin git@github.com:${GITHUBUSERNAME}/${GITHUBUSERREMOTE}
 
 # Add the remaining forks
-git remote add OlivierBondu https://github.com/OlivierBondu/GridIn.git
-git remote add blinkseb https://github.com/blinkseb/GridIn.git
-# have not yet forked, but are expected to:
-git remote add delaere https://github.com/delaere/GridIn.git
-git remote add BrieucF https://github.com/BrieucF/GridIn.git
-git remote add swertz https://github.com/swertz/GridIn.git
-git remote add vidalm https://github.com/vidalm/GridIn.git
-git remote add camillebeluffi https://github.com/camillebeluffi/GridIn.git
-git remote add acaudron https://github.com/acaudron/GridIn.git
 git remote add AlexandreMertens https://github.com/AlexandreMertens/GridIn.git
+git remote add blinkseb https://github.com/blinkseb/GridIn.git
+git remote add BrieucF https://github.com/BrieucF/GridIn.git
+git remote add mdelcourt https://github.com/mdelcourt/GridIn.git
+git remote add OlivierBondu https://github.com/OlivierBondu/GridIn.git
+git remote add pieterdavid https://github.com/pieterdavid/GridIn.git
+git remote add sdevissc https://github.com/sdevissc/GridIn.git
+git remote add swertz https://github.com/swertz/GridIn.git
 
 pushd ${CMSSW_BASE}/src/cp3_llbb/GridIn/test > /dev/null
 ln -s -d ${CMSSW_BASE}/src/cp3_llbb/Datasets/datasets datasets
