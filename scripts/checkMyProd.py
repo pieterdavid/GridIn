@@ -110,14 +110,23 @@ def main():
     # Loop over the tasks and perform a crab status
     #####
     for task in alltasks:
-        if len(data) > 0 and unicode(task) in data[u'GRIDIN-INDB']:
-            tasks['GRIDIN-INDB'].append(task)
-            continue
+        if len(data) > 0:
+            if unicode(task) in data[u'GRIDIN-INDB']:
+                tasks['GRIDIN-INDB'].append(task)
+                continue
+            elif unicode(task) in data[u'COMPLETED']:
+                tasks['COMPLETED'].append(task)
+                continue
         taskdir = os.path.join('tasks/', task)
         print ""
         print "#####", task, "#####"
         try:
             status = utils.send_crab_command('status', dir = taskdir)
+            ## workaround for https://github.com/dmwm/CRABClient/issues/4702
+            if all( sjDict["State"] == "finished" for sjID, sjDict in status["jobs"].iteritems() ):
+                status["status"] = "COMPLETED"
+            if any( sjDict["State"] == "failed" for sjID, sjDict in status["jobs"].iteritems() ):
+                status["status"] = "FAILED"
         except CRABClient.ClientExceptions.CachefileNotFoundException:
             print("Something went wrong: directory {} was not properly created. Will count it as 'SUBMITFAILED'...\n".format(taskdir))
             tasks['SUBMITFAILED'].append(task)
@@ -170,7 +179,7 @@ def main():
     if len(tasks['SUBMITFAILED']) > 0:
         print "##### SUBMITFAILED tasks #####"
         for task in tasks['SUBMITFAILED']:
-            print "rm -r tasks/" + task + "; crab submit " + task + ".py" + format_blacklist
+            print "rm -r tasks/" + task + "; crab submit " + task + ".py" + format_blacklist()
     if len(tasks['FAILED']) > 0:
         print "##### FAILED tasks #####"
         for task in tasks['FAILED']:
