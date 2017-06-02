@@ -38,6 +38,7 @@ def get_options():
     parser.add_argument('--new', action='store_true', help='Start monitoring a new production', dest='new')
     parser.add_argument('-j', '--json', type=str, action='store', dest='outjson', default='prod_default.json',
                         help='json file storing the status of your on-going production') 
+    parser.add_argument("--recheckcompleted", action="store_true", help="Also check the status of jobs marked as 'completed' again", dest="recheckcompleted")
     options = parser.parse_args()
     return options
 
@@ -114,7 +115,7 @@ def main():
             if unicode(task) in data[u'GRIDIN-INDB']:
                 tasks['GRIDIN-INDB'].append(task)
                 continue
-            elif unicode(task) in data[u'COMPLETED']:
+            elif ( not options.recheckcompleted ) and unicode(task) in data[u'COMPLETED']:
                 tasks['COMPLETED'].append(task)
                 continue
         taskdir = os.path.join('tasks/', task)
