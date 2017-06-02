@@ -1,7 +1,7 @@
+# -*- coding: utf-8 -*-
 import httplib
 import os
 import sys
-# -*- coding: utf-8 -*-
 
 import subprocess
 
@@ -100,41 +100,43 @@ def load_request(folder):
         cache = pickle.load(f)
         return cache
 
+def parseGithubUrl(fullUrl, stripDotGit=False):
+    """ Get user/organisation and repository name from github remote name (optionally removing the trailing ".git") """
+    remote, repo = fullUrl.split(":")[-1].split("/")[-2:]
+    if stripDotGit:
+        repo = repo.strip(".git")
+    return remote, repo
+def getRemoteUrl(gitDir, remoteName):
+    """ Get the url of the remote with name remoteName for the git repository in gitDir """
+    return subprocess.check_output(["git", "config", "--get", "remote.{0}.url".format(remoteName)], cwd=gitDir).strip()
 
 def getGitTagRepoUrl(gitCallPath):
     # get the stuff needed to write a valid url: name on github, name of repo, for both origin and upstream
-    proc = subprocess.Popen(['git', 'remote', 'show', 'origin'], cwd = gitCallPath, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    remoteOrigin = ''
-    repoOrigin = ''
-    if 'fatal' not in proc.stderr.read():
-        remoteOrigin = proc.stdout.read()
-        remoteOrigin = [x.split(':')[-1].split('/') for x in remoteOrigin.split('\n') if 'Fetch URL' in x]
-        remoteOrigin, repoOrigin = remoteOrigin[0]
-        repoOrigin = repoOrigin.strip('.git')
-    proc = subprocess.Popen(['git', 'remote', 'show', 'upstream'], cwd = gitCallPath, stdout=subprocess.PIPE)
-    remoteUpstream = proc.stdout.read()
-    remoteUpstream = [x.split(':')[-1].split('/') for x in remoteUpstream.split('\n') if 'Fetch URL' in x]
-    remoteUpstream, repoUpstream = remoteUpstream[0]
-    repoUpstream = repoUpstream.strip('.git')
+    originUrl   = getRemoteUrl(gitCallPath, "origin")
+    remoteOrigin  , repoOrigin   = parseGithubUrl(originUrl  , stripDotGit=True)
+    upstreamUrl = getRemoteUrl(gitCallPath, "upstream")
+    remoteUpstream, repoUpstream = parseGithubUrl(upstreamUrl, stripDotGit=True)
     # get the hash of the commit
     # Well, note that actually it should be the tag if a tag exist, the hash is the fallback solution
-    proc = subprocess.Popen(['git', 'describe', '--tags', '--always', '--dirty'], cwd = gitCallPath, stdout=subprocess.PIPE)
-    gitHash = proc.stdout.read().strip('\n')
-    if( 'dirty' in gitHash ):
+    gitHash = subprocess.check_output(['git', 'describe', '--tags', '--always', '--dirty'], cwd=gitCallPath).strip()
+    if 'dirty' in gitHash:
         raise AssertionError("Aborting: your working tree for repository", repoOrigin, "is dirty, please clean the changes not staged/committed before inserting this in the database") 
     # get the list of branches in which you can find the hash
-    proc = subprocess.Popen(['git', 'branch', '-r', '--contains', gitHash], cwd = gitCallPath, stdout=subprocess.PIPE)
-    branch = proc.stdout.read()
-    if( 'upstream' in branch ):
-        url = "https://github.com/" + remoteUpstream + "/" + repoUpstream + "/tree/" + gitHash
+    branches = [ br.strip() for br in subprocess.check_output(['git', 'branch', '-r', '--contains', gitHash], cwd=gitCallPath).strip().split("\n") ]
+    if any("upstream" in br for br in branches):
+        url = "https://github.com/{remote}/{repo}/tree/{gitHash}".format(remote=remoteUpstream, repo=repoUpstream, gitHash=gitHash)
+        remote = remoteUpstream
         repo = repoUpstream
-    elif( 'origin' in branch ):
-        url = "https://github.com/" + remoteOrigin + "/" + repoOrigin + "/tree/" + gitHash
+    elif any("origin" in br for br in branches):
+        remote = remoteOrigin
         repo = repoOrigin
-    elif( '/' in branch ):
-        url = "https://github.com/" + branch.strip(" ").split("/")[0] + "/" + repoOrigin + "/tree/" + branch.strip(" ").split("/")[1]
+    elif any("/" in br for br in branches):
+        ## assume the remote name is the user/org on github, and the repository name is the same as origin
+        theBranch = next(br for br in branches if "/" in br)
+        remote = theBranch.split("/")[0]
         repo = repoOrigin
     else:
         print "PLEASE PUSH YOUR CODE!!! this result CANNOT be reproduced / bookkept outside of your ingrid session, so there is no point into putting it in the database, ABORTING now"
         raise AssertionError("Code from repository " + repoUpstream + " has not been pushed")
+    url = "https://github.com/{remote}/{repo}/tree/{gitHash}".format(remote=remote, repo=repo, gitHash=gitHash)
     return gitHash, repo, url
