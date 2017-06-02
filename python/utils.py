@@ -108,7 +108,10 @@ def parseGithubUrl(fullUrl, stripDotGit=False):
     return remote, repo
 def getRemoteUrl(gitDir, remoteName):
     """ Get the url of the remote with name remoteName for the git repository in gitDir """
-    return subprocess.check_output(["git", "config", "--get", "remote.{0}.url".format(remoteName)], cwd=gitDir).strip()
+    try:
+        return subprocess.check_output(["git", "config", "--get", "remote.{0}.url".format(remoteName)], cwd=gitDir).strip()
+    except subprocess.CalledProcessError, e:
+        raise AssertionError('Repository at "{0}" has no remote with name "{1}".\nCommand "{2}" returned {3:d} with output "{4}"'.format(gitDir, remoteName, " ".join(e.cmd), e.returncode, e.output))
 
 def getGitTagRepoUrl(gitCallPath):
     # get the stuff needed to write a valid url: name on github, name of repo, for both origin and upstream
@@ -137,6 +140,7 @@ def getGitTagRepoUrl(gitCallPath):
         repo = repoOrigin
     else:
         print "PLEASE PUSH YOUR CODE!!! this result CANNOT be reproduced / bookkept outside of your ingrid session, so there is no point into putting it in the database, ABORTING now"
+        print "Remote branches that contain the checked-out commit: {0}".format(", ".join(branches))
         raise AssertionError("Code from repository " + repoUpstream + " has not been pushed")
     url = "https://github.com/{remote}/{repo}/tree/{gitHash}".format(remote=remote, repo=repo, gitHash=gitHash)
     return gitHash, repo, url
