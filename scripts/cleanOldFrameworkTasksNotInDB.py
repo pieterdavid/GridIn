@@ -188,6 +188,10 @@ def isFramework(path, f = 'log/cmsRun_1.log.tar.gz'):
 #        print "\t", isdir(dirname(tarLog)), dirname(tarLog)
         if isdir(dirname(tarLog)):
             logs = [x for x in listdir(dirname(tarLog)) if isfile(join(dirname(tarLog),x))]
+            if len(logs) < 1:
+                print("Warning: no log files found for this task, no way to tell if it was produced by our framework or not")
+                return False
+
             return isFramework(dirname(tarLog), f = logs[0])
         else:
             if 'failed' not in f:
