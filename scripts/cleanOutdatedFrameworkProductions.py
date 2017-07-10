@@ -36,14 +36,19 @@ def get_options():
     parser.add_argument('--ingridUsername', action='store', dest='ingridUsername', default=username, type=str,
         help='ingrid username')
     parser.add_argument('--debug', action='store_true', help='debug mode: running on only one production and do not delete anything', dest='debug')
+    parser.add_argument('-d', '--dry-run', action='store_true', help='dry mode: simulate what would happend but do not actually perform any action', dest='dry')
     parser.add_argument('-s', '--evaluateSize', action='store_true', help='evaluate disk size that would be freed', dest='evaluateSize')
+    parser.add_argument('-o', '--output', action='store', help='store list of directories to delete in this file, and do not delete anything', dest='output')
     options = parser.parse_args()
     return options
 
-def main(crabUsername, ingridUsername, DEBUG = False, evaluateSize = False):
+def main(crabUsername, ingridUsername, DEBUG = False, evaluateSize = False, dryRun=False, output=None):
     if DEBUG:
         print "RUNNING IN DEBUG MODE"
         print "Nothing will be deleted\n"
+
+    if dryRun:
+        print("Only simulating what is happening, nothing will be deleted.")
 
     dbstore = DbStore()
 
@@ -52,7 +57,7 @@ def main(crabUsername, ingridUsername, DEBUG = False, evaluateSize = False):
     results = dbstore.find(Sample)
     for r in results:
         if crabUsername in r.path:
-            list_allDBsamples.append([r.name, r.source_dataset_id])
+            list_allDBsamples.append([r.name, r.sample_id])
     print ""
 
     print "##### Get the list of existing productions"
@@ -63,6 +68,7 @@ def main(crabUsername, ingridUsername, DEBUG = False, evaluateSize = False):
     list_all_productions = []
     for i, s in enumerate(list_allDBsamples):
         s_name, s_id = s
+
         isProdAlreadyListed = False
         isSampleProtected = False
         for FWtag, Anatag in list_all_productions:
@@ -107,6 +113,13 @@ def main(crabUsername, ingridUsername, DEBUG = False, evaluateSize = False):
         FWtag = tags[0]
         list_all_productions.append([FWtag, Anatag])
 
+    globalTotalSize = 0
+
+    # If needed, open output file
+    f = None
+    if output:
+        f = open(output, 'w')
+
     for i, p in enumerate(list_all_productions):
         if DEBUG and i > 0:
             break
@@ -114,53 +127,97 @@ def main(crabUsername, ingridUsername, DEBUG = False, evaluateSize = False):
 
         extrastring = ''
         if not evaluateSize:
-            extrastring = '(evaluation of the disk size is OFF by default)'
-        print "\n##### Now looking at prod FWtag= ", FWtag, 'Anatag= ', Anatag, 'and list the associated folders %s' % extrastring
+            extrastring = ' (evaluation of the disk size is OFF by default)'
+        print("\n##### Now looking at prod FWtag: {}, Anatag: {} and list the associated folders{}".format(FWtag, Anatag, extrastring))
         totalSize = 0
-        totalSamples = 0
         cannotManageToDeleteThisProd = False
+
+        sample_ids = set()
+
         for s_name, s_id in list_allDBsamples:
             if FWtag in str(s_name) and Anatag in str(s_name):
                 result = dbstore.find(Sample, Sample.name == s_name)
                 s = result.one()
+
                 if evaluateSize:
                     totalSize += int(subprocess.check_output(["du", '-s', str(s.path)]).split()[0].decode('utf-8'))
-                totalSamples += 1
+
+                sample_ids.add(s.sample_id)
+
                 if s.source_sample is not None:
-                    print "WARNING, the sample", s_name, "depend on another sample, aborting now"
+                    print "WARNING, the sample", s.name, "depend on another sample, aborting now"
                     cannotManageToDeleteThisProd = True
                     break
-                if s.derived_samples.count() > 0:
-                    print "WARNING, the sample", s_name, "has derived samples, aborting now"
-                    cannotManageToDeleteThisProd = True
-                    break
+
                 if s.results.count() > 0:
-                    print "WARNING, the sample", s_name, "has derived results, aborting now"
+                    print "WARNING, the sample", s.name, "has derived results, aborting now"
                     cannotManageToDeleteThisProd = True
                     break
-                print s.path
+
+                if s.derived_samples.count() > 0:
+                    # Find all derived samples in the database
+                    r = dbstore.find(Sample, Sample.source_sample == s.sample_id)
+                    for derived_sample in r:
+                        sample_ids.add(derived_sample.sample_id)
+
         if cannotManageToDeleteThisProd:
             continue
 
-        print '\tFWtag= ', FWtag, 'Anatag= ', Anatag, 'totalSamples= ', totalSamples, 'totalSize= ', totalSize, "(%s)" % sizeof_fmt(totalSize)
-        if confirm(prompt='\tDo you REALLY want to DELETE this prod from disk and from SAMADhi?', resp=False):
-            for s_name, s_id in list_allDBsamples:
-                if FWtag in str(s_name) and Anatag in str(s_name):
-                    result = dbstore.find(Sample, Sample.name == s_name)
-                    s = result.one()
-                    if DEBUG:
-                        print 'rm -r %s' % s.path
-                        print 'rm -r %s' % str(s.path).rsplit('/0000', 1)[0]
-                        print 'dbstore.remove()'
+        totalSamples = len(sample_ids)
+
+        globalTotalSize += totalSize
+
+        print("\tNumber of samples: {}, total size: {}".format(totalSamples, sizeof_fmt(totalSize) if evaluateSize else 'N/A'))
+        print("")
+
+        message = "\tDo you REALLY want to DELETE this prod from SAMADhi"
+        if not f:
+            message += " and from disk?"
+        else:
+            message += "?"
+
+        if dryRun or confirm(prompt=message, resp=False):
+            for sample_id in sorted(sample_ids):
+                result = dbstore.find(Sample, Sample.sample_id == sample_id)
+                s = result.one()
+
+                if s.source_sample:
+                    # This sample is a merged sample, no need to remove any files, only the database entry
+
+                    if dryRun:
+                        print("\tDeleting merged sample {}.".format(s.name))
+                    else:
+                        dbstore.remove(s)
+
+                else:
+
+                    if f:
+                        f.write(str(s.path).rsplit('/0000', 1)[0] + '\n')
+
+                    if dryRun:
+                        print("\tDeleting sample {}.\n\t\tPath on storage: {}".format(s.name, s.path))
+                        if DEBUG:
+                            print 'rm -r %s' % s.path
+                            print 'rm -r %s' % str(s.path).rsplit('/0000', 1)[0]
                     else:
                         try:
-                            shutil.rmtree(s.path)
-                            shutil.rmtree(str(s.path).rsplit('/0000', 1)[0])
+                            if not f:
+                                shutil.rmtree(s.path)
+                                shutil.rmtree(str(s.path).rsplit('/0000', 1)[0])
                         except OSError:
                             print "Seems we have a buggy path: %s" % s.path
                             print "deleting the DB entry then moving on..."
                         dbstore.remove(s)
-                        dbstore.commit()
+
+            dbstore.commit()
+
+    if dryRun:
+        print("")
+        print("Potential freeable space: {}".format(sizeof_fmt(globalTotalSize) if evaluateSize else 'N/A'))
+
+    if f:
+        f.close()
+    
 
 # FIXME: deal with extensions and merged samples
 
@@ -207,4 +264,4 @@ def confirm(prompt=None, resp=False):
 
 if __name__ == '__main__':
     options = get_options()
-    main(options.crabUsername, options.ingridUsername, DEBUG = options.debug, evaluateSize = options.evaluateSize) 
+    main(options.crabUsername, options.ingridUsername, DEBUG = options.debug, evaluateSize = options.evaluateSize, dryRun=options.dry, output=options.output) 
