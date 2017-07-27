@@ -8,20 +8,9 @@ import json
 import argparse
 import re
 
-# import CRAB3 stuff
 import CRABClient
 
-# import CMSSW stuff
-CMSSW_BASE = os.environ['CMSSW_BASE']
-SCRAM_ARCH = os.environ['SCRAM_ARCH']
-sys.path.append(os.path.join(CMSSW_BASE,'bin', SCRAM_ARCH))
-
-# Add default ingrid storm package
-sys.path.append('/nfs/soft/python/python-2.7.5-sl6_amd64_gcc44/lib/python2.7/site-packages/storm-0.20-py2.7-linux-x86_64.egg')
-sys.path.append('/nfs/soft/python/python-2.7.5-sl6_amd64_gcc44/lib/python2.7/site-packages/MySQL_python-1.2.3-py2.7-linux-x86_64.egg')
-
-# import SAMADhi stuff
-from SAMADhi import Dataset, Sample, File, DbStore
+from cp3_llbb.SAMADhi.SAMADhi import Dataset, Sample, File, DbStore
 
 from cp3_llbb.GridIn import utils
 

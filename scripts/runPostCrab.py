@@ -9,17 +9,8 @@ import sys
 import json
 from pwd import getpwuid
 
-# import SAMADhi stuff
-CMSSW_BASE = os.environ['CMSSW_BASE']
-SCRAM_ARCH = os.environ['SCRAM_ARCH']
-sys.path.append(os.path.join(CMSSW_BASE, 'bin', SCRAM_ARCH))
-
-# Add default ingrid storm package
-sys.path.append('/nfs/soft/python/python-2.7.5-sl6_amd64_gcc44/lib/python2.7/site-packages/storm-0.20-py2.7-linux-x86_64.egg')
-sys.path.append('/nfs/soft/python/python-2.7.5-sl6_amd64_gcc44/lib/python2.7/site-packages/MySQL_python-1.2.3-py2.7-linux-x86_64.egg')
-
-from SAMADhi import Dataset, Sample, File, DbStore
-import das_import
+from cp3_llbb.SAMADhi.SAMADhi import Dataset, Sample, File, DbStore
+import cp3_llbb.SAMADhi.das_import
 
 # import a bit of ROOT
 import ROOT
@@ -175,7 +166,7 @@ def main():
         # print values
         if( len(values) == 0 ):
             print "Importing CMS dataset"
-            das_import.import_cms_dataset(inputDataset)
+            cp3_llbb.SAMADhi.das_import.import_cms_dataset(inputDataset)
             print "done"
             values = get_dataset(inputDataset)
         # if there is more than one sample then we're in trouble, crash here
