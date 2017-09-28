@@ -19,6 +19,9 @@ ROOT.gROOT.Reset()
 
 from cp3_llbb.GridIn import utils
 
+# import CMSSW stuff
+CMSSW_BASE = os.environ['CMSSW_BASE']
+
 def get_file_data(pfn):
     """
     Return the sum of event weights and the entries of the framework output
