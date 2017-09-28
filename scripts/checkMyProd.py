@@ -10,6 +10,9 @@ import re
 
 import CRABClient
 
+# import CMSSW stuff
+CMSSW_BASE = os.environ['CMSSW_BASE']
+
 from cp3_llbb.SAMADhi.SAMADhi import Dataset, Sample, File, DbStore
 
 from cp3_llbb.GridIn import utils
