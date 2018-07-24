@@ -243,7 +243,7 @@ def main():
         else:
             has_job_processed_everything = (dataset_nevents == report['numEventsRead']) and not file_missing
 
-        is_data = (config.Data.splitting == 'LumiBased')
+        is_data = (not config.Data.inputDataset.endswith("SIM"))
         if has_job_processed_everything:
             print "done"
         else:
