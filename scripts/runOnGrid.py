@@ -139,16 +139,9 @@ def submit(job):
 
     c.Data.inputDataset = job['dataset']
 
-    try:
-        splittingType, splittingValueStr = job['splitting'].split(":")
-        if splittingType == "relative":
-            c.Data.unitsPerJob = int(round(float(splittingValueStr) * job['metadata']['units_per_job']))
-        elif splittingType == "absolute":
-            c.Data.unitsPerJob = int(splittingValueStr)
-        else:
-            raise Exception("Invalid splitting setting '{0}', should take the form of 'relative:float' or 'absolute:int'".format(options.splitting))
-    except:
-        raise Exception("Cannot parse splitting setting '{0}', should take the form of 'relative:float' or 'absolute:int'".format(options.splitting))
+    if "splitting" in job or "units_per_job" in job["metadata"]:
+        import warnings
+        warnings.warn("Jobs use automatic splitting from CRAB, so the 'splitting' and 'units_per_job' options are ignored", DeprecationWarning)
 
     pyCfgParams = [str('runOnData=%d' % (0 if job['on_mc'] else 1))]
 
@@ -236,9 +229,6 @@ for name, analysis in analyses.items():
 
         return False
 
-    if not 'splitting' in analysis:
-        analysis['splitting'] = 'relative:1'
-
     # Expand groups
     data_groups = []
     mc_groups = []
@@ -302,7 +292,6 @@ for name, analysis in analyses.items():
 
             job = {
                     'analysis': name,
-                    'splitting': analysis['splitting'],
                     'on_mc': mc,
                     'pset': pset,
                     'dataset': dataset,

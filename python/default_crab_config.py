@@ -22,10 +22,8 @@ def create_config(is_mc):
     config.Data.inputDBS = 'global'
     config.Data.allowNonValidInputDataset = True
 
-    if is_mc:
-        config.Data.splitting = 'FileBased'
-    else:
-        config.Data.splitting = 'LumiBased'
+    config.Data.splitting = "Automatic"
+    config.Data.unitsPerJob = 480
 
     config.Data.outLFNDirBase = '/store/user/%s/' % (getUsernameFromSiteDB())
     config.Data.publication = False
