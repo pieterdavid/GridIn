@@ -136,7 +136,7 @@ def main():
                 if status_code == "SUBMITTED": ## can already try to resubmit if any of the followup stages have failed jobs
                     jobsPerStage = jobstatusPerStage(status["jobList"])
                     lSt = "0" if len(jobsPerStage) == 1 else max(jobsPerStage.iterkeys(), key=lambda st : int(st))
-                    if any(jst == "FAILED" for sji,jst in jobsPerStage[lSt].iteritems()):
+                    if any(jst == "failed" for sji,jst in jobsPerStage[lSt].iteritems()):
                         status_code = "TORESUBMIT"
             tasks[status_code].append(task)
         except CRABClient.ClientExceptions.CachefileNotFoundException:
